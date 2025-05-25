@@ -1,0 +1,261 @@
+
+import sqlite3
+import json
+
+# Dados das atividades (copiados da sua seleção no Canvas)
+# Em um cenário real com muitos dados, seria melhor carregar de um arquivo JSON.
+# Para este exemplo, vamos usar os dados fornecidos diretamente.
+dados_atividades_json = """
+[
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Língua Portuguesa",
+    "nome_atividade": "Entrevista com pessoa de importância",
+    "descricao_atividade": "Entrevista de alguma pessoa de importância em qualquer área, fazer pessoalmente ou on line, entregar a entrevista escrito ou escrita em forma de resumo junto com gravação. Pode ser enviado com rede social do pai ou da mãe.",
+    "tipo_atividade": "Individual",
+    "data_atividade": "2025-08-01"
+  },
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Matemática",
+    "nome_atividade": "Jogo de Xadrez",
+    "descricao_atividade": "Jogar xadrez.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-04"
+  },
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Ciências",
+    "nome_atividade": "Filmagem de Experiência Científica",
+    "descricao_atividade": "Filmar uma experiência, o proposito de fazer a experiencias, o que está provando e a solução.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-05"
+  },
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "História",
+    "nome_atividade": "Pesquisa sobre Origem e Imigração Familiar",
+    "descricao_atividade": "Mostrar pesquisa pode ser de um parente sobre origem e imigração para o Brasil ou do Brasil para outro país. O por que veio, onde morava, etc. Podendo também obter pesquisas on line de alfandegas, etc.",
+    "tipo_atividade": "Individual",
+    "data_atividade": "2025-08-06"
+  },
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Geografia",
+    "nome_atividade": "Reportagem: Povos Pós-Desastres Climáticos",
+    "descricao_atividade": "Como está vivendo os povos que sofreram com desastres climáticos, como está vivendo as pessoas, a região como está? Tem ainda problemas de deslizamento de terras. Reportagem, pesquisas, apresentações on line ou presenciais.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-07"
+  },
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Arte",
+    "nome_atividade": "Desfile Reciclado ou Exposição Temática",
+    "descricao_atividade": "Desfile com roupas feitas com reciclagem, com tema especifico: alegria ou tristeza, ou exposição de objetos com esses temas.",
+    "tipo_atividade": "Em Grupo",
+    "data_atividade": "2025-08-08"
+  },
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Língua Estrangeira",
+    "nome_atividade": "Música e Culinária Estrangeira",
+    "descricao_atividade": "Dançar, traduzir e narrar uma Musica, fazer receitas.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-11"
+  },
+  {
+    "aluno_id": "6A01",
+    "aluno_nome": "Ana",
+    "aluno_sobrenome": "Silva",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Educação Física",
+    "nome_atividade": "Campeonato de Corrida/Fitdance ou Pesquisa Esportiva",
+    "descricao_atividade": "Campeonato de corrida, fitdance (dancinhas) ou pesquisa sobre a história desse esporte.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-12"
+  },
+  {
+    "aluno_id": "7B05",
+    "aluno_nome": "Eduardo",
+    "aluno_sobrenome": "Rodrigues",
+    "serie": "7º ano",
+    "turma": "B",
+    "disciplina": "Língua Portuguesa",
+    "nome_atividade": "Classificação de Estrofe e Verso em Poemas",
+    "descricao_atividade": "Por que tem que classificar estrofe e verso, o aluno deverá ou ler pessoalmente com classificação ou ler e outras pessoas encenar o poema.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-13"
+  },
+  {
+    "aluno_id": "7B05",
+    "aluno_nome": "Eduardo",
+    "aluno_sobrenome": "Rodrigues",
+    "serie": "7º ano",
+    "turma": "B",
+    "disciplina": "Matemática",
+    "nome_atividade": "Pesquisa e Entrevista: Profissionais de Cálculos",
+    "descricao_atividade": "Fazer uma pesquisa junto entrevista, tem de obter uma explicação resumida de profissional que trabalha com cálculos matemáticos.",
+    "tipo_atividade": "Individual",
+    "data_atividade": "2025-08-14"
+  },
+  {
+    "aluno_id": "8C10",
+    "aluno_nome": "Julia",
+    "aluno_sobrenome": "Gomes",
+    "serie": "8º ano",
+    "turma": "C",
+    "disciplina": "Ciências",
+    "nome_atividade": "Biografia de Astronauta",
+    "descricao_atividade": "A vida de um algum astronauta bibliografia, o que aprendeu, como conseguiu ser astronauta.",
+    "tipo_atividade": "Individual",
+    "data_atividade": "2025-08-15"
+  },
+  {
+    "aluno_id": "8C10",
+    "aluno_nome": "Julia",
+    "aluno_sobrenome": "Gomes",
+    "serie": "8º ano",
+    "turma": "C",
+    "disciplina": "História",
+    "nome_atividade": "Escravidão, Imigração e Colonização no Brasil",
+    "descricao_atividade": "Mostrar escravidão, imigração do Brasil, colonização: os índios. O modo para mostrar o conteúdo é livre.",
+    "tipo_atividade": "Flexível",
+    "data_atividade": "2025-08-18"
+  },
+  {
+    "aluno_id": "9D15",
+    "aluno_nome": "Samuel",
+    "aluno_sobrenome": "Melo",
+    "serie": "9º ano",
+    "turma": "D",
+    "disciplina": "Geografia",
+    "nome_atividade": "Fontes Renováveis ou Imigrações no Brasil",
+    "descricao_atividade": "Explica em abaixo como anda fonte renováveis no mundo ou imigrações no Brasil: causas, economia, guerras, afins.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-19"
+  },
+  {
+    "aluno_id": "9D15",
+    "aluno_nome": "Samuel",
+    "aluno_sobrenome": "Melo",
+    "serie": "9º ano",
+    "turma": "D",
+    "disciplina": "Arte",
+    "nome_atividade": "Criações Artísticas Diversas",
+    "descricao_atividade": "Pinturas, vídeos coreografias, interpretação de personagens.",
+    "tipo_atividade": "Flexível",
+    "data_atividade": "2025-08-20"
+  },
+  {
+    "aluno_id": "6A02",
+    "aluno_nome": "Bruno",
+    "aluno_sobrenome": "Santos",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Língua Portuguesa",
+    "nome_atividade": "Entrevista com pessoa de importância",
+    "descricao_atividade": "Entrevista de alguma pessoa de importância em qualquer área, fazer pessoalmente ou on line, entregar a entrevista escrito ou escrita em forma de resumo junto com gravação. Pode ser enviado com rede social do pai ou da mãe.",
+    "tipo_atividade": "Individual",
+    "data_atividade": "2025-08-21"
+  },
+  {
+    "aluno_id": "6A02",
+    "aluno_nome": "Bruno",
+    "aluno_sobrenome": "Santos",
+    "serie": "6º ano",
+    "turma": "A",
+    "disciplina": "Matemática",
+    "nome_atividade": "Jogo de Xadrez",
+    "descricao_atividade": "Jogar xadrez.",
+    "tipo_atividade": "Individual/Em Grupo",
+    "data_atividade": "2025-08-22"
+  }
+]
+"""
+
+# Carrega os dados JSON
+lista_atividades = json.loads(dados_atividades_json)
+
+# Nome do arquivo do banco de dados SQLite
+db_name = 'escola_atividades.db'
+
+def criar_banco():
+    # Conecta ao banco de dados (cria o arquivo se não existir)
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    # Cria a tabela de atividades dos alunos se ela não existir
+    # Adicionamos uma coluna 'id' autoincrementável como chave primária para cada registro de atividade
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS atividades_alunos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        aluno_id TEXT,
+        aluno_nome TEXT,
+        aluno_sobrenome TEXT,
+        serie TEXT,
+        turma TEXT,
+        disciplina TEXT,
+        nome_atividade TEXT,
+        descricao_atividade TEXT,
+        tipo_atividade TEXT,
+        data_atividade TEXT
+    )
+    ''')
+
+    # Insere os dados na tabela
+    for atividade in lista_atividades:
+        cursor.execute('''
+        INSERT INTO atividades_alunos (
+            aluno_id, aluno_nome, aluno_sobrenome, serie, turma, 
+            disciplina, nome_atividade, descricao_atividade, 
+            tipo_atividade, data_atividade
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            atividade.get('aluno_id'),
+            atividade.get('aluno_nome'),
+            atividade.get('aluno_sobrenome'),
+            atividade.get('serie'),
+            atividade.get('turma'),
+            atividade.get('disciplina'),
+            atividade.get('nome_atividade'),
+            atividade.get('descricao_atividade'),
+            atividade.get('tipo_atividade'),
+            atividade.get('data_atividade')
+        ))
+
+    # Salva (commit) as mudanças e fecha a conexão
+    conn.commit()
+    conn.close()
+    print(f"Banco de dados '{db_name}' criado e populado com sucesso!")
+
+if __name__ == '__main__':
+    criar_banco()
